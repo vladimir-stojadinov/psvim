@@ -9,7 +9,7 @@ subprocess.run([sys.executable, os.path.join(ROOT, "installer/make-msi.py"), "--
 zpath = os.path.join(dist, f"psvim-{ver}.zip")
 top = f"psvim-{ver}"
 with zipfile.ZipFile(zpath, "w", zipfile.ZIP_DEFLATED) as z:
-    for f in ("setup.ps1", "README.md", "UPUTSTVO.md"):
+    for f in ("setup.ps1", "README.md", "UPUTSTVO.md", "INSTALACIJA.md"):
         z.write(os.path.join(ROOT, f), f"{top}/{f}")
     for f in ("Install.cmd", "Uninstall.cmd"):
         z.write(os.path.join(ROOT, "installer", f), f"{top}/{f}")

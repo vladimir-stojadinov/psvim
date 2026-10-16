@@ -48,68 +48,21 @@ Kratko uputstvo za početak: [UPUTSTVO.md](UPUTSTVO.md)
 
 ## Instalacija
 
-Radi u **Windows PowerShell 5.1** (ugrađen u Windows 10/11, treba .NET Framework 4.7.2+) i u **PowerShell 7.4+** (Windows, Linux, macOS). PowerShell 7 je brži i ima bolje predloge u promptu, ali sve funkcije editora rade u obe verzije.
+Radi u **Windows PowerShell 5.1** i **PowerShell 7.4+**, bez administratorskih prava. Detaljno uputstvo (svi načini, nadogradnja, uklanjanje, rešavanje problema): **[INSTALACIJA.md](INSTALACIJA.md)**.
 
-### Način 1: MSI instaler (preporučeno ako antivirus blokira skripte)
+**MSI (preporučeno):** preuzmi [psvim-0.2.0.msi](https://github.com/vladimir-stojadinov/psvim/raw/main/releases/psvim-0.2.0.msi), pokreni ga, otvori novi PowerShell prozor i kucaj `psvim`. Za vim mod u promptu: `Set-PsVimProfile`.
 
-1. Preuzmi `psvim-<verzija>.msi` iz foldera [releases](https://github.com/vladimir-stojadinov/psvim/tree/main/releases) (direktno: [psvim-0.2.0.msi](https://github.com/vladimir-stojadinov/psvim/raw/main/releases/psvim-0.2.0.msi)) i pokreni ga.
-   Instalira se samo za tvog korisnika (bez administratorskih prava) i ne pokreće nikakve skripte —
-   samo kopira modul u `Documents\WindowsPowerShell\Modules` i `Documents\PowerShell\Modules`.
-   Windows može da prikaže „Windows protected your PC“ jer instaler nije digitalno potpisan: *More info → Run anyway*.
-2. Otvori novi PowerShell prozor — `psvim` odmah radi.
-3. (Opciono) vim mod u promptu i automatsko učitavanje: `Set-PsVimProfile` (ili `Set-PsVimProfile -NoPrompt` samo za editor).
+**ZIP:** preuzmi [psvim-0.2.0.zip](https://github.com/vladimir-stojadinov/psvim/raw/main/releases/psvim-0.2.0.zip), raspakuj i pokreni `Install.cmd`.
 
-Uklanjanje: *Settings → Apps → psvim → Uninstall* (pa `Set-PsVimProfile -Remove` ako si menjao profil). Nova verzija MSI-ja sama zamenjuje staru.
-
-### Način 2: ZIP
-
-Preuzmi `psvim-<verzija>.zip` iz foldera [releases](https://github.com/vladimir-stojadinov/psvim/tree/main/releases) (direktno: [psvim-0.2.0.zip](https://github.com/vladimir-stojadinov/psvim/raw/main/releases/psvim-0.2.0.zip)), raspakuj i dvaput klikni na **`Install.cmd`** (pokreće `setup.ps1` iz raspakovanog foldera — ništa se ne preuzima). `Uninstall.cmd` uklanja.
-
-### Način 3: jedna komanda
+**Jedna komanda** (ako antivirus ne blokira):
 
 ```powershell
 irm https://raw.githubusercontent.com/vladimir-stojadinov/psvim/main/setup.ps1 | iex
 ```
 
-Neki antivirusi (npr. Cynet) blokiraju ovaj oblik („preuzmi i izvrši“) — tada koristi MSI ili ZIP.
+Ako PowerShell javi „running scripts is disabled“: `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned`.
 
-**Ako PowerShell javi „running scripts is disabled on this system“** (podrazumevano u Windows PowerShell 5.1), dozvoli lokalne skripte samo za svog korisnika:
-
-```powershell
-Set-ExecutionPolicy -Scope CurrentUser RemoteSigned
-```
-
-### Način 4: iz izvornog koda
-
-```powershell
-git clone https://github.com/vladimir-stojadinov/psvim
-cd psvim
-./setup.ps1
-```
-
-Setup postavlja nekoliko pitanja (vim mod u promptu, tema, relativni brojevi, Nerd Font, uvlačenje, PSScriptAnalyzer, lazygit), a zatim:
-
-1. instalira za PowerShell iz kog je pokrenut — **Windows PowerShell 5.1** ili **PowerShell 7.4+** — a ako na računaru postoji i drugi, nudi da instalira i za njega
-2. instalira modul u korisnički folder za module
-3. dodaje blok `# >>> psvim >>>` u `$PROFILE` (pravi rezervnu kopiju `.psvim-bak`; ostatak profila ne dira)
-4. pravi `~/.config/psvim/config.json`
-5. proverava da se modul učitava
-
-| Opcija | Šta radi |
-|---|---|
-| `-Yes` | bez pitanja, sve podrazumevano |
-| `-Theme catppuccin` | tema (`tokyonight`, `catppuccin`, `gruvbox`, `kanagawa`) |
-| `-NoPrompt` | bez vim moda u promptu (samo `psvim` editor) |
-| `-NoAnalyzer` / `-NoLazygit` | preskoči dodatke |
-| `-ResetConfig` | prepiši postojeću konfiguraciju |
-| `-Build` | izgradi DLL-ove iz koda (treba .NET 8 SDK); inače se koriste gotovi |
-| `-Uninstall` | ukloni modul i blok iz `$PROFILE` (konfiguracija ostaje) |
-
-Za ažuriranje samo ponovo pokreni setup (ili noviji MSI). Ako je modul učitan u otvorenom prozoru, nova verzija važi od sledećeg prozora.
-
-Za razvoj: `./build.ps1 -Test` (build + testovi), `./build.ps1 -Install`.
-
-Preporuka: Nerd Font (npr. `JetBrainsMono Nerd Font`) u terminalu za ikonice.
+Za razvoj: `git clone`, pa `./build.ps1 -Test` i `./setup.ps1`.
 
 ## Korišćenje
 

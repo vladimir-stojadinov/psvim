@@ -19,6 +19,8 @@ Radi i u Windows PowerShell 5.1 i u PowerShell 7. Ako PowerShell javi da su skri
 
 Uklanjanje: *Settings → Apps → psvim* (za MSI), ili `Uninstall.cmd` iz ZIP-a.
 
+Svi načini instalacije, nadogradnja i rešavanje problema: **[INSTALACIJA.md](INSTALACIJA.md)**.
+
 ## 2. Pokretanje
 
 ```powershell
