@@ -2,7 +2,7 @@
 
 ## 1. Instalacija (jednom)
 
-**MSI (najlakše):** preuzmi `psvim-<verzija>.msi` sa https://github.com/vladimir-stojadinov/psvim/releases/latest i pokreni ga (ne traži administratorska prava; ako Windows upozori, *More info → Run anyway*). Zatim u novom PowerShell prozoru:
+**MSI (najlakše):** preuzmi `psvim-<verzija>.msi` sa https://github.com/vladimir-stojadinov/psvim/raw/main/releases/psvim-0.2.0.msi i pokreni ga (ne traži administratorska prava; ako Windows upozori, *More info → Run anyway*). Zatim u novom PowerShell prozoru:
 
 ```powershell
 Set-PsVimProfile        # vim mod u promptu + automatsko učitavanje (opciono)

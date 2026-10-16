@@ -52,7 +52,7 @@ Radi u **Windows PowerShell 5.1** (ugrađen u Windows 10/11, treba .NET Framewor
 
 ### Način 1: MSI instaler (preporučeno ako antivirus blokira skripte)
 
-1. Preuzmi `psvim-<verzija>.msi` sa stranice [Releases](https://github.com/vladimir-stojadinov/psvim/releases/latest) i pokreni ga.
+1. Preuzmi `psvim-<verzija>.msi` iz foldera [releases](https://github.com/vladimir-stojadinov/psvim/tree/main/releases) (direktno: [psvim-0.2.0.msi](https://github.com/vladimir-stojadinov/psvim/raw/main/releases/psvim-0.2.0.msi)) i pokreni ga.
    Instalira se samo za tvog korisnika (bez administratorskih prava) i ne pokreće nikakve skripte —
    samo kopira modul u `Documents\WindowsPowerShell\Modules` i `Documents\PowerShell\Modules`.
    Windows može da prikaže „Windows protected your PC“ jer instaler nije digitalno potpisan: *More info → Run anyway*.
@@ -63,7 +63,7 @@ Uklanjanje: *Settings → Apps → psvim → Uninstall* (pa `Set-PsVimProfile -R
 
 ### Način 2: ZIP
 
-Preuzmi `psvim-<verzija>.zip` sa [Releases](https://github.com/vladimir-stojadinov/psvim/releases/latest), raspakuj i dvaput klikni na **`Install.cmd`** (pokreće `setup.ps1` iz raspakovanog foldera — ništa se ne preuzima). `Uninstall.cmd` uklanja.
+Preuzmi `psvim-<verzija>.zip` iz foldera [releases](https://github.com/vladimir-stojadinov/psvim/tree/main/releases) (direktno: [psvim-0.2.0.zip](https://github.com/vladimir-stojadinov/psvim/raw/main/releases/psvim-0.2.0.zip)), raspakuj i dvaput klikni na **`Install.cmd`** (pokreće `setup.ps1` iz raspakovanog foldera — ništa se ne preuzima). `Uninstall.cmd` uklanja.
 
 ### Način 3: jedna komanda
 
