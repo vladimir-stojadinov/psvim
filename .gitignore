@@ -1,0 +1,7 @@
+bin/
+obj/
+!module/PsVim/bin/
+.localfeed/
+*.user
+.vs/
+module/PsVim/bin/*.new.dll
