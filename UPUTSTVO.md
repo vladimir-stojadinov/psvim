@@ -2,21 +2,22 @@
 
 ## 1. Instalacija (jednom)
 
-Otvori PowerShell i pokreni:
+**MSI (najlakše):** preuzmi `psvim-<verzija>.msi` sa https://github.com/vladimir-stojadinov/psvim/releases/latest i pokreni ga (ne traži administratorska prava; ako Windows upozori, *More info → Run anyway*). Zatim u novom PowerShell prozoru:
+
+```powershell
+Set-PsVimProfile        # vim mod u promptu + automatsko učitavanje (opciono)
+psvim
+```
+
+**Ili jedna komanda** (ako je antivirus ne blokira):
 
 ```powershell
 irm https://raw.githubusercontent.com/vladimir-stojadinov/psvim/main/setup.ps1 | iex
 ```
 
-Odgovori na nekoliko pitanja (Enter = podrazumevano) i otvori novi PowerShell prozor. To je sve — setup instalira modul, upisuje psvim u `$PROFILE` i pravi konfiguraciju. Radi i u Windows PowerShell 5.1 i u PowerShell 7; ako imaš oba, setup nudi da instalira za oba.
+Radi i u Windows PowerShell 5.1 i u PowerShell 7. Ako PowerShell javi da su skripte zabranjene: `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned`.
 
-Ažuriranje: ista komanda. Uklanjanje:
-
-```powershell
-& ([scriptblock]::Create((irm https://raw.githubusercontent.com/vladimir-stojadinov/psvim/main/setup.ps1))) -Uninstall
-```
-
-Isti oblik prima i opcije, npr. `-Yes -Theme catppuccin` za instalaciju bez pitanja.
+Uklanjanje: *Settings → Apps → psvim* (za MSI), ili `Uninstall.cmd` iz ZIP-a.
 
 ## 2. Pokretanje
 

@@ -50,13 +50,36 @@ Kratko uputstvo za početak: [UPUTSTVO.md](UPUTSTVO.md)
 
 Radi u **Windows PowerShell 5.1** (ugrađen u Windows 10/11, treba .NET Framework 4.7.2+) i u **PowerShell 7.4+** (Windows, Linux, macOS). PowerShell 7 je brži i ima bolje predloge u promptu, ali sve funkcije editora rade u obe verzije.
 
-Jedna komanda — preuzima psvim, instalira modul, podešava `$PROFILE` i konfiguraciju:
+### Način 1: MSI instaler (preporučeno ako antivirus blokira skripte)
+
+1. Preuzmi `psvim-<verzija>.msi` sa stranice [Releases](https://github.com/vladimir-stojadinov/psvim/releases/latest) i pokreni ga.
+   Instalira se samo za tvog korisnika (bez administratorskih prava) i ne pokreće nikakve skripte —
+   samo kopira modul u `Documents\WindowsPowerShell\Modules` i `Documents\PowerShell\Modules`.
+   Windows može da prikaže „Windows protected your PC“ jer instaler nije digitalno potpisan: *More info → Run anyway*.
+2. Otvori novi PowerShell prozor — `psvim` odmah radi.
+3. (Opciono) vim mod u promptu i automatsko učitavanje: `Set-PsVimProfile` (ili `Set-PsVimProfile -NoPrompt` samo za editor).
+
+Uklanjanje: *Settings → Apps → psvim → Uninstall* (pa `Set-PsVimProfile -Remove` ako si menjao profil). Nova verzija MSI-ja sama zamenjuje staru.
+
+### Način 2: ZIP
+
+Preuzmi `psvim-<verzija>.zip` sa [Releases](https://github.com/vladimir-stojadinov/psvim/releases/latest), raspakuj i dvaput klikni na **`Install.cmd`** (pokreće `setup.ps1` iz raspakovanog foldera — ništa se ne preuzima). `Uninstall.cmd` uklanja.
+
+### Način 3: jedna komanda
 
 ```powershell
 irm https://raw.githubusercontent.com/vladimir-stojadinov/psvim/main/setup.ps1 | iex
 ```
 
-Ili iz kloniranog repozitorijuma:
+Neki antivirusi (npr. Cynet) blokiraju ovaj oblik („preuzmi i izvrši“) — tada koristi MSI ili ZIP.
+
+**Ako PowerShell javi „running scripts is disabled on this system“** (podrazumevano u Windows PowerShell 5.1), dozvoli lokalne skripte samo za svog korisnika:
+
+```powershell
+Set-ExecutionPolicy -Scope CurrentUser RemoteSigned
+```
+
+### Način 4: iz izvornog koda
 
 ```powershell
 git clone https://github.com/vladimir-stojadinov/psvim
@@ -82,7 +105,7 @@ Setup postavlja nekoliko pitanja (vim mod u promptu, tema, relativni brojevi, Ne
 | `-Build` | izgradi DLL-ove iz koda (treba .NET 8 SDK); inače se koriste gotovi |
 | `-Uninstall` | ukloni modul i blok iz `$PROFILE` (konfiguracija ostaje) |
 
-Za ažuriranje samo ponovo pokreni setup. Ako javi da ne može da obriše modul, zatvori PowerShell prozore u kojima je psvim učitan.
+Za ažuriranje samo ponovo pokreni setup (ili noviji MSI). Ako je modul učitan u otvorenom prozoru, nova verzija važi od sledećeg prozora.
 
 Za razvoj: `./build.ps1 -Test` (build + testovi), `./build.ps1 -Install`.
 

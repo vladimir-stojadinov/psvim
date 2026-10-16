@@ -449,5 +449,45 @@ function Disable-PsVimPrompt {
     [Console]::Write("$([char]27)[0 q")
 }
 
-Export-ModuleMember -Function Invoke-PsVim, Edit-PsVimConfig, New-PsVimHooks, Enable-PsVimPrompt, Disable-PsVimPrompt, Edit-PsVimPromptLine, Show-PsVimHelpForWord, Get-PsVimPromptKeys `
+function Set-PsVimProfile {
+    <#
+    .SYNOPSIS
+        Upisuje psvim u $PROFILE (Import-Module PsVim i, ako želiš, vim mod u promptu).
+    .DESCRIPTION
+        Koristi se posle instalacije preko MSI-ja ili ZIP-a. Menja samo blok između
+        "# >>> psvim >>>" i "# <<< psvim <<<" i pravi rezervnu kopiju profila.
+    .EXAMPLE
+        Set-PsVimProfile            # psvim + vim mod u promptu
+    .EXAMPLE
+        Set-PsVimProfile -NoPrompt  # samo psvim, prompt ostaje kakav je
+    .EXAMPLE
+        Set-PsVimProfile -Remove    # ukloni blok iz profila
+    #>
+    [CmdletBinding()]
+    param([switch]$NoPrompt, [switch]$Remove)
+    $path = $PROFILE.CurrentUserAllHosts
+    $begin = '# >>> psvim >>>'; $end = '# <<< psvim <<<'
+    $old = ''
+    if (Test-Path $path) {
+        $old = Get-Content -LiteralPath $path -Raw
+        if ($null -eq $old) { $old = '' }
+        Copy-Item $path "$path.psvim-bak" -Force
+    }
+    else { New-Item -ItemType Directory -Path (Split-Path $path) -Force | Out-Null }
+    $clean = [regex]::Replace($old, '(?ms)^' + [regex]::Escape($begin) + '.*?' + [regex]::Escape($end) + '\r?\n?', '')
+    if ($Remove) {
+        Set-Content -LiteralPath $path -Value $clean -NoNewline -Encoding UTF8
+        Write-Host "psvim je uklonjen iz $path" -ForegroundColor Green
+        return
+    }
+    $lines = @($begin, 'Import-Module PsVim')
+    if (-not $NoPrompt) { $lines += 'Enable-PsVimPrompt' }
+    $lines += $end
+    if ($clean.Length -gt 0 -and -not $clean.EndsWith("`n")) { $clean += [Environment]::NewLine }
+    Set-Content -LiteralPath $path -Value ($clean + ($lines -join [Environment]::NewLine) + [Environment]::NewLine) -NoNewline -Encoding UTF8
+    Write-Host "psvim je upisan u $path" -ForegroundColor Green
+    Write-Host 'Otvori novi PowerShell prozor (ili: . $PROFILE).' -ForegroundColor Gray
+}
+
+Export-ModuleMember -Function Invoke-PsVim, Set-PsVimProfile, Edit-PsVimConfig, New-PsVimHooks, Enable-PsVimPrompt, Disable-PsVimPrompt, Edit-PsVimPromptLine, Show-PsVimHelpForWord, Get-PsVimPromptKeys `
     -Alias psvim, v, vim, vi
