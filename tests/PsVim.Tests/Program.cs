@@ -26,7 +26,7 @@ void T(string name, string initial, string keys, string expected, string cursor 
         if (ci >= 0)
         {
             var before = initial.Substring(0, ci).Split('\n');
-            ed.Buf.Cursor = new Pos(before.Length - 1, before[^1].Length);
+            ed.Buf.Cursor = new Pos(before.Length - 1, before[before.Length - 1].Length);
         }
         ed.RunKeys(keys);
         var got = ed.Buf.GetAllText("\n");
@@ -446,7 +446,7 @@ File.WriteAllText(Path.Combine(dir, "node_modules", "x.js"), "ignored");
         if (o[i] < ' ' && !char.IsLowSurrogate(o[i])) { Check("kontrolni znak u izlazu", false, ((int)o[i]).ToString()); continue; }
         // širina kao u pravom terminalu: CJK/emoji 2 kolone, kombinujući/nevidljivi 0
         int cp = char.ConvertToUtf32(ch, 0);
-        var cat = System.Globalization.CharUnicodeInfo.GetUnicodeCategory(cp);
+        var cat = System.Globalization.CharUnicodeInfo.GetUnicodeCategory(ch, 0);
         int w = cat is System.Globalization.UnicodeCategory.NonSpacingMark or System.Globalization.UnicodeCategory.Format ? 0
               : (cp >= 0x1100 && (cp <= 0x115F || (cp >= 0x2E80 && cp <= 0xA4CF) || (cp >= 0xAC00 && cp <= 0xD7A3) || (cp >= 0xF900 && cp <= 0xFAFF) || (cp >= 0xFF00 && cp <= 0xFF60) || (cp >= 0x1F300 && cp <= 0x1FAFF))) ? 2 : 1;
         if (w == 0) continue;

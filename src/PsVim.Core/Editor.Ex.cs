@@ -35,7 +35,7 @@ public sealed partial class Editor
         var rest = cmd.Substring(i).TrimStart();
         if (hasRange)
         {
-            l1 = Math.Clamp(l1.Value, 0, Buf.Count - 1); l2 = Math.Clamp(l2.Value, 0, Buf.Count - 1);
+            l1 = Compat.Clamp(l1.Value, 0, Buf.Count - 1); l2 = Compat.Clamp(l2.Value, 0, Buf.Count - 1);
             if (l2 < l1) (l1, l2) = (l2, l1);
         }
         if (rest.Length == 0)
@@ -97,7 +97,7 @@ public sealed partial class Editor
                 return;
             case "ene": case "enew": case "new":
                 {
-                    var b = new Buffer { FileType = "text", Eol = OperatingSystem.IsWindows() ? "\r\n" : "\n" };
+                    var b = new Buffer { FileType = "text", Eol = Compat.IsWindows ? "\r\n" : "\n" };
                     Buffers.Add(b); SwitchTo(b);
                     return;
                 }
@@ -163,15 +163,15 @@ public sealed partial class Editor
                     var lines = Buf.GetLines(from, to);
                     Buf.DeleteLines(from, to);
                     if (dest > to) dest -= lines.Count;
-                    Buf.InsertLines(Math.Clamp(dest + 1, 0, Buf.Count), lines);
-                    Cur = new Pos(Math.Clamp(dest + lines.Count, 0, Buf.Count - 1), 0);
+                    Buf.InsertLines(Compat.Clamp(dest + 1, 0, Buf.Count), lines);
+                    Cur = new Pos(Compat.Clamp(dest + lines.Count, 0, Buf.Count - 1), 0);
                     return;
                 }
             case "t": case "co": case "copy":
                 {
                     int dest = ParseAddrStr(arg);
                     var lines = Buf.GetLines(from, to);
-                    Buf.InsertLines(Math.Clamp(dest + 1, 0, Buf.Count), lines);
+                    Buf.InsertLines(Compat.Clamp(dest + 1, 0, Buf.Count), lines);
                     return;
                 }
             case "sor": case "sort":
@@ -250,7 +250,7 @@ public sealed partial class Editor
                 Notify($"psvim {Version}: svi \"pluginovi\" su već ugrađeni (picker, neo-tree, which-key, flash, lualine, bufferline, noice, mini.pairs, mini.comment, blink.cmp)");
                 return;
             case "checkhealth": case "health": CheckHealth(); return;
-            case "mes": case "messages": ShowPopup("Poruke", string.Join("\n", _messages.TakeLast(60))); return;
+            case "mes": case "messages": ShowPopup("Poruke", string.Join("\n", _messages.Skip(Math.Max(0, _messages.Count - 60)))); return;
             case "reg": case "registers": case "di": case "display":
                 {
                     var sb = new StringBuilder();

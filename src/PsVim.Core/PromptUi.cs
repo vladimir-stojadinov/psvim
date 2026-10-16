@@ -135,7 +135,7 @@ public static class PromptUi
                 ui.BeginFrame();
                 var sc = ui.Screen; var th = ui.Theme;
                 int h = sc.H - 2;
-                scroll = Math.Clamp(scroll, 0, Math.Max(0, lines.Length - h));
+                scroll = Compat.Clamp(scroll, 0, Math.Max(0, lines.Length - h));
                 sc.Put(1, 0, " " + title + " ", new Style(th.Bg, th.Orange, Attr.Bold));
                 for (int r = 0; r < h && scroll + r < lines.Length; r++)
                 {

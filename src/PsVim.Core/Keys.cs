@@ -98,7 +98,7 @@ public static class Keys
     private static bool IsKeyName(string n)
     {
         if (Named.Contains(n)) return true;
-        if (n.Length >= 2 && n[0] == 'F' && int.TryParse(n.AsSpan(1), out var f) && f >= 1 && f <= 12) return true;
+        if (n.Length >= 2 && n[0] == 'F' && int.TryParse(n.Substring(1), out var f) && f >= 1 && f <= 12) return true;
         if (n.Length == 3 && (n.StartsWith("C-") || n.StartsWith("c-") || n.StartsWith("A-") || n.StartsWith("M-"))) return true;
         return false;
     }

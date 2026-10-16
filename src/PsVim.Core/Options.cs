@@ -1,6 +1,3 @@
-using System.Text.Json;
-using System.Text.Json.Serialization;
-
 namespace PsVim;
 
 public sealed class KeymapConfig
@@ -42,7 +39,7 @@ public sealed class Options
     public List<string> Ignore { get; set; } = new() { ".git", "node_modules", "bin", "obj", ".vs", ".idea", "__pycache__", ".venv", "dist", "packages" };
     public List<KeymapConfig> Keymaps { get; set; } = new();
 
-    [JsonIgnore] public string LoadedFrom;
+    [JsonSkip] public string LoadedFrom { get; set; }
 
     public static string DefaultPath()
     {
@@ -59,15 +56,6 @@ public sealed class Options
         return d;
     }
 
-    private static readonly JsonSerializerOptions JsonOpts = new()
-    {
-        PropertyNameCaseInsensitive = true,
-        ReadCommentHandling = JsonCommentHandling.Skip,
-        AllowTrailingCommas = true,
-        WriteIndented = true,
-        PropertyNamingPolicy = JsonNamingPolicy.CamelCase
-    };
-
     public static Options Load(string path = null)
     {
         path ??= DefaultPath();
@@ -75,7 +63,7 @@ public sealed class Options
         {
             if (File.Exists(path))
             {
-                var o = JsonSerializer.Deserialize<Options>(File.ReadAllText(path), JsonOpts) ?? new Options();
+                var o = MiniJson.Deserialize<Options>(File.ReadAllText(path)) ?? new Options();
                 o.LoadedFrom = path;
                 return o;
             }
@@ -88,7 +76,7 @@ public sealed class Options
         return new Options();
     }
 
-    public string ToJson() => JsonSerializer.Serialize(this, JsonOpts);
+    public string ToJson() => MiniJson.Serialize(this);
 
     public static void WriteDefault(string path = null)
     {
@@ -126,9 +114,9 @@ public sealed class Options
             case "autopairs": AutoPairs = bool.Parse(Toggle(AutoPairs)); break;
             case "nerdfont": NerdFont = bool.Parse(Toggle(NerdFont)); break;
             case "hidden": ShowHidden = bool.Parse(Toggle(ShowHidden)); break;
-            case "ts": case "tabstop": TabStop = Math.Clamp(int.Parse(value ?? "4"), 1, 16); break;
-            case "sw": case "shiftwidth": ShiftWidth = Math.Clamp(int.Parse(value ?? "4"), 1, 16); break;
-            case "so": case "scrolloff": ScrollOff = Math.Clamp(int.Parse(value ?? "4"), 0, 100); break;
+            case "ts": case "tabstop": TabStop = Compat.Clamp(int.Parse(value ?? "4"), 1, 16); break;
+            case "sw": case "shiftwidth": ShiftWidth = Compat.Clamp(int.Parse(value ?? "4"), 1, 16); break;
+            case "so": case "scrolloff": ScrollOff = Compat.Clamp(int.Parse(value ?? "4"), 0, 100); break;
             case "theme": case "colorscheme": Theme = value; break;
             case "clipboard": Clipboard = value ?? ""; break;
             default: return "Nepoznata opcija: " + name;

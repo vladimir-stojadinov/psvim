@@ -1,4 +1,4 @@
-#requires -Version 7.4
+﻿#requires -Version 5.1
 <#
     psvim — vim/LazyVim za PowerShell.
     Editor je u PsVim.Core.dll (C#); ovaj modul ga povezuje sa PowerShell-om:
@@ -6,10 +6,14 @@
       * Enable-PsVimPrompt  — vim mod u samom promptu (PSReadLine) sa LazyVim prečicama
 #>
 
-$script:Dll = Join-Path $PSScriptRoot 'bin' 'PsVim.Core.dll'
+# PowerShell 7 (Core, .NET 8) koristi bin/PsVim.Core.dll; Windows PowerShell 5.1 (Desktop, .NET Framework) bin/net472/PsVim.Core.dll
+$script:Bin = Join-Path $PSScriptRoot 'bin'
+if ($PSVersionTable.PSEdition -eq 'Desktop') { $script:Bin = Join-Path $script:Bin 'net472' }
+$script:Dll = Join-Path $script:Bin 'PsVim.Core.dll'
+$script:Esc = [char]27
 if (-not ('PsVim.Editor' -as [type])) {
     if (-not (Test-Path $script:Dll)) {
-        throw "PsVim.Core.dll nije pronađen ($script:Dll). Pokreni build.ps1 iz korena projekta."
+        throw "PsVim.Core.dll nije pronađen ($script:Dll). Pokreni setup.ps1 ili build.ps1 iz korena projekta."
     }
     Add-Type -Path $script:Dll
 }
@@ -244,7 +248,7 @@ function script:Set-PromptLine([string]$text, [switch]$Accept) {
 
 function script:Format-PathArg([string]$p) {
     $cwd = (Get-Location -PSProvider FileSystem).ProviderPath
-    $rel = [IO.Path]::GetRelativePath($cwd, $p)
+    $rel = [PsVim.Compat]::RelativePath($cwd, $p)
     if (-not $rel.StartsWith('..')) { $p = ".$([IO.Path]::DirectorySeparatorChar)$rel" }
     if ($p -match "[\s'`$`(`)\{\}&;,]") { "'" + ($p -replace "'", "''") + "'" } else { $p }
 }
@@ -301,7 +305,10 @@ function script:Invoke-PromptAction([string]$key) {
         }
         'ui' {
             $o = Get-PSReadLineOption
-            if ($o.PredictionSource -eq 'None') { Set-PSReadLineOption -PredictionSource HistoryAndPlugin } else { Set-PSReadLineOption -PredictionSource None }
+            try {
+                if ($o.PredictionSource -eq 'None') { Set-PSReadLineOption -PredictionSource History } else { Set-PSReadLineOption -PredictionSource None }
+            }
+            catch { [PsVim.PromptUi]::ShowText('Predlozi', "Inline predlozi traže PSReadLine 2.1+.`n`nInstall-Module PSReadLine -Scope CurrentUser -Force") }
         }
     }
 }
@@ -378,18 +385,30 @@ function Enable-PsVimPrompt {
 
     Set-PSReadLineOption -EditMode Vi
     # oblik kursora: blok u normal modu, crta u insert modu (kao u LazyVim-u)
-    Set-PSReadLineOption -ViModeIndicator Script -ViModeChangeHandler {
-        param($mode)
-        if ($mode -eq 'Command') { [Console]::Write("`e[2 q") } else { [Console]::Write("`e[6 q") }
+    try {
+        Set-PSReadLineOption -ViModeIndicator Script -ViModeChangeHandler {
+            param($mode)
+            if ($mode -eq 'Command') { [Console]::Write("$([char]27)[2 q") } else { [Console]::Write("$([char]27)[6 q") }
+        }
     }
+    catch { try { Set-PSReadLineOption -ViModeIndicator Cursor } catch { } }
     if (-not $NoPredictions) {
-        try { Set-PSReadLineOption -PredictionSource HistoryAndPlugin -PredictionViewStyle InlineView } catch { }
+        # HistoryAndPlugin traži PowerShell 7.2+; u 5.1 sa PSReadLine 2.1+ radi History; PSReadLine 2.0 nema predloge
+        try { Set-PSReadLineOption -PredictionSource HistoryAndPlugin -PredictionViewStyle InlineView }
+        catch { try { Set-PSReadLineOption -PredictionSource History } catch { } }
     }
-    Set-PSReadLineOption -Colors @{
-        Command = '#7aa2f7'; Parameter = '#e0af68'; Variable = '#7dcfff'; String = '#9ece6a'; Number = '#ff9e64'
-        Operator = '#89ddff'; Keyword = '#bb9af7'; Type = '#2ac3de'; Member = '#73daca'; Comment = '#565f89'
-        InlinePrediction = '#565f89'
+    # boje kao ANSI sekvence (radi i u PSReadLine 2.0 iz Windows PowerShell-a 5.1)
+    $c = @{}
+    $palette = @{
+        Command = '7aa2f7'; Parameter = 'e0af68'; Variable = '7dcfff'; String = '9ece6a'; Number = 'ff9e64'
+        Operator = '89ddff'; Keyword = 'bb9af7'; Type = '2ac3de'; Member = '73daca'; Comment = '565f89'
     }
+    foreach ($k in $palette.Keys) {
+        $hex = $palette[$k]
+        $c[$k] = "$script:Esc[38;2;{0};{1};{2}m" -f [Convert]::ToInt32($hex.Substring(0, 2), 16), [Convert]::ToInt32($hex.Substring(2, 2), 16), [Convert]::ToInt32($hex.Substring(4, 2), 16)
+    }
+    try { Set-PSReadLineOption -Colors $c } catch { }
+    try { Set-PSReadLineOption -Colors @{ InlinePrediction = "$script:Esc[38;2;86;95;137m" } } catch { }
 
     # ---- normal (command) mod ----
     Set-PSReadLineKeyHandler -ViMode Command -Chord 'Spacebar' -BriefDescription 'psvim leader' -ScriptBlock {
@@ -409,7 +428,7 @@ function Enable-PsVimPrompt {
     Set-PSReadLineKeyHandler -ViMode Insert -Chord 'Ctrl+Spacebar' -Function MenuComplete
     Set-PSReadLineKeyHandler -ViMode Insert -Chord 'UpArrow' -Function HistorySearchBackward
     Set-PSReadLineKeyHandler -ViMode Insert -Chord 'DownArrow' -Function HistorySearchForward
-    Set-PSReadLineKeyHandler -ViMode Insert -Chord 'Ctrl+y' -Function AcceptSuggestion
+    try { Set-PSReadLineKeyHandler -ViMode Insert -Chord 'Ctrl+y' -Function AcceptSuggestion } catch { }  # PSReadLine 2.1+
     Set-PSReadLineKeyHandler -ViMode Insert -Chord 'Ctrl+t' -BriefDescription 'Ubaci putanju fajla' -ScriptBlock {
         $f = [PsVim.PromptUi]::PickFile((Get-Location -PSProvider FileSystem).ProviderPath, 'Ubaci putanju')
         [Microsoft.PowerShell.PSConsoleReadLine]::InvokePrompt()
@@ -427,7 +446,7 @@ function Enable-PsVimPrompt {
 function Disable-PsVimPrompt {
     <# .SYNOPSIS Vraća Windows/Emacs način uređivanja u promptu. #>
     Set-PSReadLineOption -EditMode Windows
-    [Console]::Write("`e[0 q")
+    [Console]::Write("$([char]27)[0 q")
 }
 
 Export-ModuleMember -Function Invoke-PsVim, Edit-PsVimConfig, New-PsVimHooks, Enable-PsVimPrompt, Disable-PsVimPrompt, Edit-PsVimPromptLine, Show-PsVimHelpForWord, Get-PsVimPromptKeys `

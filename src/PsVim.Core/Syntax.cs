@@ -160,7 +160,7 @@ public sealed class PowerShellLexer : ILexer
                 spans.Add(new Span(i, e + 2 - i, Tok.Comment)); i = e + 2; continue;
             }
             if (c == '#') { spans.Add(new Span(i, n - i, Tok.Comment)); return LexState.Normal; }
-            if (c == '@' && i + 1 < n && (s[i + 1] == '"' || s[i + 1] == '\'') && s.AsSpan(i + 2).Trim().Length == 0)
+            if (c == '@' && i + 1 < n && (s[i + 1] == '"' || s[i + 1] == '\'') && s.Substring(i + 2).Trim().Length == 0)
             {
                 spans.Add(new Span(i, n - i, Tok.String));
                 return s[i + 1] == '"' ? LexState.HereDouble : LexState.HereSingle;
@@ -211,7 +211,7 @@ public sealed class PowerShellLexer : ILexer
                 }
                 if (depth == 0 && prevSig != 'v' && prevSig != ']' && prevSig != ')')
                 {
-                    var inner = s.AsSpan(i + 1, j - i - 2);
+                    var inner = s.Substring(i + 1, j - i - 2);
                     bool attr = inner.IndexOf('(') >= 0;
                     spans.Add(new Span(i, j - i, attr ? Tok.Attribute : Tok.Type));
                     i = j; prevSig = 't'; continue;

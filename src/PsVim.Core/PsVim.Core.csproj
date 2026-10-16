@@ -1,10 +1,17 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFramework>net8.0</TargetFramework>
+    <!-- net8.0 za PowerShell 7.4+, net472 za Windows PowerShell 5.1 -->
+    <TargetFrameworks>net8.0;net472</TargetFrameworks>
     <Nullable>disable</Nullable>
     <LangVersion>latest</LangVersion>
     <RootNamespace>PsVim</RootNamespace>
     <AssemblyName>PsVim.Core</AssemblyName>
     <ImplicitUsings>enable</ImplicitUsings>
+    <Version>0.2.0</Version>
+  </PropertyGroup>
+  <!-- Na Linuxu/macOS-u bez NuGet-a: referentni sklopovi iz mono-a. Na Windows-u SDK ih sam nabavi. -->
+  <PropertyGroup Condition="'$(TargetFramework)' == 'net472' And '$(FrameworkPathOverride)' == '' And Exists('/usr/lib/mono/4.7.2-api')">
+    <FrameworkPathOverride>/usr/lib/mono/4.7.2-api</FrameworkPathOverride>
+    <AutomaticallyUseReferenceAssemblyPackages>false</AutomaticallyUseReferenceAssemblyPackages>
   </PropertyGroup>
 </Project>

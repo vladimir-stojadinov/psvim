@@ -9,7 +9,7 @@ public struct Pos : IComparable<Pos>, IEquatable<Pos>
     public int CompareTo(Pos o) => L != o.L ? L.CompareTo(o.L) : C.CompareTo(o.C);
     public bool Equals(Pos o) => L == o.L && C == o.C;
     public override bool Equals(object obj) => obj is Pos p && Equals(p);
-    public override int GetHashCode() => HashCode.Combine(L, C);
+    public override int GetHashCode() => Compat.Hash(L, C);
     public static bool operator <(Pos a, Pos b) => a.CompareTo(b) < 0;
     public static bool operator >(Pos a, Pos b) => a.CompareTo(b) > 0;
     public static bool operator <=(Pos a, Pos b) => a.CompareTo(b) <= 0;
@@ -96,14 +96,14 @@ public sealed class Buffer
                 b.IsBinary = true;
                 b.ReadOnly = true;
             }
-            b.Eol = text.Contains("\r\n") ? "\r\n" : (text.Contains('\n') ? "\n" : (OperatingSystem.IsWindows() ? "\r\n" : "\n"));
+            b.Eol = text.Contains("\r\n") ? "\r\n" : (text.Contains('\n') ? "\n" : (Compat.IsWindows ? "\r\n" : "\n"));
             b.SetText(text);
             // kao vim: poslednji \n ne pravi dodatnu praznu liniju
             if (b.Lines.Count > 1 && b.Lines[^1].Length == 0) b.Lines.RemoveAt(b.Lines.Count - 1);
         }
         else
         {
-            b.Eol = OperatingSystem.IsWindows() ? "\r\n" : "\n";
+            b.Eol = Compat.IsWindows ? "\r\n" : "\n";
         }
         b.SavedChangeId = b.ChangeId;
         return b;
@@ -165,8 +165,8 @@ public sealed class Buffer
 
     public Pos Clamp(Pos p)
     {
-        int l = Math.Clamp(p.L, 0, Lines.Count - 1);
-        int c = Math.Clamp(p.C, 0, Lines[l].Length);
+        int l = Compat.Clamp(p.L, 0, Lines.Count - 1);
+        int c = Compat.Clamp(p.C, 0, Lines[l].Length);
         return new Pos(l, c);
     }
 
@@ -228,9 +228,9 @@ public sealed class Buffer
         }
         if (a.L == b.L) return Lines[a.L].Substring(a.C, b.C - a.C);
         var sb = new StringBuilder();
-        sb.Append(Lines[a.L].AsSpan(a.C)).Append('\n');
+        sb.Append(Lines[a.L], a.C, Lines[a.L].Length - a.C).Append('\n');
         for (int l = a.L + 1; l < b.L; l++) sb.Append(Lines[l]).Append('\n');
-        sb.Append(Lines[b.L].AsSpan(0, b.C));
+        sb.Append(Lines[b.L], 0, b.C);
         return sb.ToString();
     }
 
@@ -247,7 +247,7 @@ public sealed class Buffer
 
     public void InsertLines(int at, IEnumerable<string> lines)
     {
-        at = Math.Clamp(at, 0, Lines.Count);
+        at = Compat.Clamp(at, 0, Lines.Count);
         Lines.InsertRange(at, lines);
         Touch();
     }

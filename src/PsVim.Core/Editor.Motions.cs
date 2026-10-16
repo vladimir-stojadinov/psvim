@@ -72,12 +72,12 @@ public sealed partial class Editor
             case "ge": case "gE": { var q = p; for (int i = 0; i < n; i++) q = WordEndBack(q, k == "gE"); return R(q, false, true); }
             case "G":
                 {
-                    int l = hadCount ? Math.Clamp(n - 1, 0, b.Count - 1) : b.Count - 1;
+                    int l = hadCount ? Compat.Clamp(n - 1, 0, b.Count - 1) : b.Count - 1;
                     var r = R(new Pos(l, b.FirstNonBlank(l)), true); r.Jump = true; return r;
                 }
             case "gg":
                 {
-                    int l = hadCount ? Math.Clamp(n - 1, 0, b.Count - 1) : 0;
+                    int l = hadCount ? Compat.Clamp(n - 1, 0, b.Count - 1) : 0;
                     var r = R(new Pos(l, b.FirstNonBlank(l)), true); r.Jump = true; return r;
                 }
             case "f": case "F": case "t": case "T":
@@ -98,7 +98,7 @@ public sealed partial class Editor
                 }
             case "%":
                 {
-                    if (hadCount) { int l = Math.Clamp((n * b.Count + 99) / 100 - 1, 0, b.Count - 1); return R(new Pos(l, b.FirstNonBlank(l)), true); }
+                    if (hadCount) { int l = Compat.Clamp((n * b.Count + 99) / 100 - 1, 0, b.Count - 1); return R(new Pos(l, b.FirstNonBlank(l)), true); }
                     var q = MatchBracket(p);
                     if (q == null) return null;
                     var r = R(q.Value, false, true); r.Jump = true; return r;

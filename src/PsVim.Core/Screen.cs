@@ -15,7 +15,7 @@ public readonly struct Style : IEquatable<Style>
     public Style With(Attr a) => new(Fg, Bg, Attr | a);
     public bool Equals(Style o) => Fg == o.Fg && Bg == o.Bg && Attr == o.Attr;
     public override bool Equals(object obj) => obj is Style s && Equals(s);
-    public override int GetHashCode() => HashCode.Combine(Fg, Bg, Attr);
+    public override int GetHashCode() => Compat.Hash(Fg, Bg, (int)Attr);
 }
 
 public enum CursorShape { Block, Bar, Underline, Hidden }

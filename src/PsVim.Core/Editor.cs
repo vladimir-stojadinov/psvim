@@ -39,7 +39,7 @@ public sealed class Notification
 
 public sealed partial class Editor
 {
-    public const string Version = "0.1.0";
+    public const string Version = "0.2.0";
 
     public readonly Ui Ui;
     public Options Opt => Ui.Options;
@@ -115,7 +115,7 @@ public sealed partial class Editor
         {
             if (string.IsNullOrWhiteSpace(f)) continue;
             // vim stil: psvim +12 fajl.ps1
-            if (f.StartsWith("+") && int.TryParse(f.AsSpan(1), out var ln)) { pendingLine = Math.Max(0, ln - 1); continue; }
+            if (f.StartsWith("+") && int.TryParse(f.Substring(1), out var ln)) { pendingLine = Math.Max(0, ln - 1); continue; }
             var p = Path.IsPathRooted(f) ? f : Path.Combine(ed.Cwd, f);
             if (Directory.Exists(p)) { ed.Cwd = Path.GetFullPath(p); ed.OpenTree(true); continue; }
             ed.Open(p, restorePos: pendingLine < 0, line: pendingLine);
@@ -251,7 +251,7 @@ public sealed partial class Editor
         {
             Buf = null;
             if (_alt != null && Buffers.Contains(_alt)) SwitchTo(_alt);
-            else if (Buffers.Count > 0) SwitchTo(Buffers[Math.Clamp(idx - 1, 0, Buffers.Count - 1)]);
+            else if (Buffers.Count > 0) SwitchTo(Buffers[Compat.Clamp(idx - 1, 0, Buffers.Count - 1)]);
             else ShowDashboard();
         }
     }
@@ -306,7 +306,7 @@ public sealed partial class Editor
         if (full == null) return "";
         try
         {
-            var rel = Path.GetRelativePath(Cwd, full);
+            var rel = Compat.RelativePath(Cwd, full);
             if (!rel.StartsWith("..")) return rel;
             var home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
             if (full.StartsWith(home, StringComparison.OrdinalIgnoreCase)) return "~" + full.Substring(home.Length);
@@ -323,7 +323,7 @@ public sealed partial class Editor
         LastMessage = text;
         if (string.IsNullOrEmpty(text)) return;
         _notes.RemoveAll(n => n.Text == text);
-        _notes.Add(new Notification { Text = text, Error = error, Until = Environment.TickCount64 + (error ? 6000 : 3000) });
+        _notes.Add(new Notification { Text = text, Error = error, Until = Compat.Ticks + (error ? 6000 : 3000) });
         if (_notes.Count > 4) _notes.RemoveAt(0);
         _messages.Add((error ? "E " : "  ") + text);
         if (_messages.Count > 200) _messages.RemoveAt(0);
@@ -556,7 +556,7 @@ public sealed partial class Editor
         int so = Math.Min(Opt.ScrollOff, (_textH - 1) / 2);
         if (Cur.L < Buf.Top + so) Buf.Top = Math.Max(0, Cur.L - so);
         if (Cur.L > Buf.Top + _textH - 1 - so) Buf.Top = Cur.L - _textH + 1 + so;
-        Buf.Top = Math.Clamp(Buf.Top, 0, Math.Max(0, Buf.Count - 1));
+        Buf.Top = Compat.Clamp(Buf.Top, 0, Math.Max(0, Buf.Count - 1));
         int textW = _textW - _gutterW;
         int dc = DisplayCol(Line, Cur.C);
         if (dc < Buf.Left) Buf.Left = dc;
@@ -675,7 +675,7 @@ public sealed partial class Editor
             if (diagByLine.TryGetValue(l, out var dl2))
             {
                 var d = dl2[0];
-                int c0 = Math.Clamp(d.Col, 0, Math.Max(0, line.Length - 1));
+                int c0 = Compat.Clamp(d.Col, 0, Math.Max(0, line.Length - 1));
                 int c1 = c0; while (c1 < line.Length && !char.IsWhiteSpace(line[c1])) c1++;
                 if (c1 == c0) c1 = Math.Min(line.Length, c0 + 1);
                 for (int k = c0; k < c1; k++)
@@ -820,7 +820,7 @@ public sealed partial class Editor
 
     private void DrawNotifications()
     {
-        var now = Environment.TickCount64;
+        var now = Compat.Ticks;
         _notes.RemoveAll(n => n.Until < now - 400 && !_keepNotes);
         _keepNotes = false;
         var sc = Ui.Screen; var th = Th;

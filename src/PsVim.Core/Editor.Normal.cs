@@ -665,15 +665,15 @@ public sealed partial class Editor
     private void ScrollHalf(int dir)
     {
         int h = Math.Max(1, _textH / 2);
-        Buf.Top = Math.Clamp(Buf.Top + dir * h, 0, Math.Max(0, Buf.Count - 1));
-        int l = Math.Clamp(Cur.L + dir * h, 0, Buf.Count - 1);
+        Buf.Top = Compat.Clamp(Buf.Top + dir * h, 0, Math.Max(0, Buf.Count - 1));
+        int l = Compat.Clamp(Cur.L + dir * h, 0, Buf.Count - 1);
         Cur = new Pos(l, ColFromDisplay(Buf[l], Buf.WantCol));
     }
 
     private void ScrollPage(int dir)
     {
         int h = Math.Max(1, _textH - 2);
-        Buf.Top = Math.Clamp(Buf.Top + dir * h, 0, Math.Max(0, Buf.Count - 1));
+        Buf.Top = Compat.Clamp(Buf.Top + dir * h, 0, Math.Max(0, Buf.Count - 1));
         int l = dir > 0 ? Math.Min(Buf.Count - 1, Buf.Top + Opt.ScrollOff) : Math.Min(Buf.Count - 1, Buf.Top + _textH - 1 - Opt.ScrollOff);
         l = Math.Max(0, l);
         Cur = new Pos(l, ColFromDisplay(Buf[l], Buf.WantCol));

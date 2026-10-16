@@ -25,13 +25,7 @@ public static class Files
             "$Recycle.Bin", "System Volume Information", "$WinREAgent", "Config.Msi", "Recovery", "WinSxS"
         };
         var globs = LoadGitIgnore(root);
-        var eo = new EnumerationOptions
-        {
-            IgnoreInaccessible = true,
-            AttributesToSkip = o.ShowHidden ? FileAttributes.System : (FileAttributes.System | FileAttributes.Hidden),
-            RecurseSubdirectories = false,
-            ReturnSpecialDirectories = false
-        };
+        var skipAttr = o.ShowHidden ? FileAttributes.System : (FileAttributes.System | FileAttributes.Hidden);
         var stack = new Stack<string>();
         stack.Push(root);
         while (stack.Count > 0)
@@ -43,8 +37,9 @@ public static class Files
             try
             {
                 var di = new DirectoryInfo(dir);
-                foreach (var fsi in di.EnumerateFileSystemInfos("*", eo))
+                foreach (var fsi in Compat.EnumerateEntries(di))
                 {
+                    if ((fsi.Attributes & skipAttr) != 0) continue;
                     var name = fsi.Name;
                     if (ignore.Contains(name)) continue;
                     if (!o.ShowHidden && name.StartsWith('.')) continue;
@@ -60,7 +55,7 @@ public static class Files
             catch { continue; }
             files.Sort(StringComparer.OrdinalIgnoreCase);
             foreach (var f in files)
-                if (!onFile(Path.GetRelativePath(root, f))) return;
+                if (!onFile(Compat.RelativePath(root, f))) return;
             subdirs.Sort(StringComparer.OrdinalIgnoreCase);
             for (int i = subdirs.Count - 1; i >= 0; i--) stack.Push(subdirs[i]);
         }
@@ -82,7 +77,7 @@ public static class Files
             {
                 var name = Path.GetFileName(s);
                 if (ignore.Contains(name) || (!o.ShowHidden && name.StartsWith('.'))) continue;
-                res.Add(Path.GetRelativePath(root, s));
+                res.Add(Compat.RelativePath(root, s));
                 q.Enqueue((s, depth + 1));
             }
         }
@@ -210,7 +205,7 @@ public static class Files
             }
         }
         // jedno jezgro uvek ostaje slobodno za UI; niže prioritet da tasteri ne kasne
-        int n = Math.Clamp(Environment.ProcessorCount - 1, 1, 6);
+        int n = Compat.Clamp(Environment.ProcessorCount - 1, 1, 6);
         var threads = new Thread[n];
         for (int t = 0; t < n; t++)
         {
@@ -277,7 +272,7 @@ public static class Files
     public static string GitBranch(string start)
     {
         if (start == null) return null;
-        var now = Environment.TickCount64;
+        var now = Compat.Ticks;
         if (_branchCache.TryGetValue(start, out var c) && now - c.At < 3000) return c.Branch;
         var b = GitBranchUncached(start);
         _branchCache[start] = (now, b);
@@ -316,7 +311,7 @@ public static class Files
     public static string FindInPath(string exe)
     {
         var path = Environment.GetEnvironmentVariable("PATH") ?? "";
-        var exts = OperatingSystem.IsWindows()
+        var exts = Compat.IsWindows
             ? (Environment.GetEnvironmentVariable("PATHEXT") ?? ".EXE;.CMD;.BAT").Split(';')
             : new[] { "" };
         foreach (var d in path.Split(Path.PathSeparator))
@@ -378,8 +373,8 @@ public sealed class FileIndex
     /// <summary>Čeka da se indeks završi najviše ms milisekundi.</summary>
     public bool Wait(int ms)
     {
-        var until = Environment.TickCount64 + ms;
-        while (!_done && Environment.TickCount64 < until) Thread.Sleep(10);
+        var until = Compat.Ticks + ms;
+        while (!_done && Compat.Ticks < until) Thread.Sleep(10);
         return _done;
     }
 
@@ -458,7 +453,7 @@ public sealed class FileTree
             int i = Visible.FindIndex(v => string.Equals(v.Node.Path, selPath, StringComparison.OrdinalIgnoreCase));
             if (i >= 0) Sel = i;
         }
-        Sel = Math.Clamp(Sel, 0, Math.Max(0, Visible.Count - 1));
+        Sel = Compat.Clamp(Sel, 0, Math.Max(0, Visible.Count - 1));
     }
 
     public Node Current => Sel >= 0 && Sel < Visible.Count ? Visible[Sel].Node : null;

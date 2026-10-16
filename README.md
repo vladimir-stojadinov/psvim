@@ -48,6 +48,8 @@ Kratko uputstvo za početak: [UPUTSTVO.md](UPUTSTVO.md)
 
 ## Instalacija
 
+Radi u **Windows PowerShell 5.1** (ugrađen u Windows 10/11, treba .NET Framework 4.7.2+) i u **PowerShell 7.4+** (Windows, Linux, macOS). PowerShell 7 je brži i ima bolje predloge u promptu, ali sve funkcije editora rade u obe verzije.
+
 Jedna komanda — preuzima psvim, instalira modul, podešava `$PROFILE` i konfiguraciju:
 
 ```powershell
@@ -64,7 +66,7 @@ cd psvim
 
 Setup postavlja nekoliko pitanja (vim mod u promptu, tema, relativni brojevi, Nerd Font, uvlačenje, PSScriptAnalyzer, lazygit), a zatim:
 
-1. proverava PowerShell 7.4+ — ako je pokrenut iz Windows PowerShell 5.1, nudi instalaciju preko winget-a i sam se ponovo pokreće u `pwsh`-u
+1. instalira za PowerShell iz kog je pokrenut — **Windows PowerShell 5.1** ili **PowerShell 7.4+** — a ako na računaru postoji i drugi, nudi da instalira i za njega
 2. instalira modul u korisnički folder za module
 3. dodaje blok `# >>> psvim >>>` u `$PROFILE` (pravi rezervnu kopiju `.psvim-bak`; ostatak profila ne dira)
 4. pravi `~/.config/psvim/config.json`
@@ -77,7 +79,7 @@ Setup postavlja nekoliko pitanja (vim mod u promptu, tema, relativni brojevi, Ne
 | `-NoPrompt` | bez vim moda u promptu (samo `psvim` editor) |
 | `-NoAnalyzer` / `-NoLazygit` | preskoči dodatke |
 | `-ResetConfig` | prepiši postojeću konfiguraciju |
-| `-Build` | izgradi DLL iz koda (treba .NET 8 SDK); inače se koristi gotov |
+| `-Build` | izgradi DLL-ove iz koda (treba .NET 8 SDK); inače se koriste gotovi |
 | `-Uninstall` | ukloni modul i blok iz `$PROFILE` (konfiguracija ostaje) |
 
 Za ažuriranje samo ponovo pokreni setup. Ako javi da ne može da obriše modul, zatvori PowerShell prozore u kojima je psvim učitan.
@@ -151,7 +153,8 @@ Opcije se menjaju i u letu: `:set rnu! ts=2 sw=2`, `:colorscheme catppuccin`.
 ## Arhitektura
 
 ```
-src/PsVim.Core/        C# (.NET 8), bez spoljnih zavisnosti
+src/PsVim.Core/        C#, bez spoljnih zavisnosti; builduje se za net8.0 (PowerShell 7)
+                       i net472 (Windows PowerShell 5.1) iz istog koda (Compat.cs, MiniJson.cs)
   Editor*.cs           modovi, kretanja, operatori, ex komande, LazyVim sloj
   Buffer.cs            tekst, undo/redo, učitavanje/snimanje (čuva BOM i CRLF)
   Screen.cs            dvostruki bafer, šalje terminalu samo razlike (truecolor ANSI)
@@ -159,7 +162,7 @@ src/PsVim.Core/        C# (.NET 8), bez spoljnih zavisnosti
   Ui.cs                picker, fuzzy algoritam, which-key
   Files.cs             nabrajanje fajlova, grep, nedavni fajlovi, stablo
   PromptUi.cs          picker-i i which-key za PSReadLine
-module/PsVim/          PowerShell modul: kuke (clipboard, Get-Help, parser,
+module/PsVim/          PowerShell modul (bin/ za PS 7, bin/net472/ za PS 5.1): kuke (clipboard, Get-Help, parser,
                        PSScriptAnalyzer, TabExpansion2) i PSReadLine prečice
 tests/PsVim.Tests/     238 testova koji "kucaju" tastere i proveravaju rezultat
 ```
@@ -168,6 +171,7 @@ Editor ne zavisi od PowerShell SDK-a; sve što traži PowerShell ide kroz `PsVim
 
 ## Ograničenja (za sada)
 
+- U Windows PowerShell 5.1 inline predlozi u promptu traže PSReadLine 2.1+ (`Install-Module PSReadLine -Scope CurrentUser -Force`); uz ugrađeni PSReadLine 2.0 sve ostalo radi
 - Nema podele prozora (split) ni prelamanja dugih linija (koristi se horizontalno skrolovanje)
 - Široki znakovi (emoji, CJK) prikazuju se kao `□`, a nevidljivi i kontrolni kao `?` (da se ekran ne bi raspao)
 - Binarni fajlovi (exe, dll, zip) otvaraju se samo za čitanje

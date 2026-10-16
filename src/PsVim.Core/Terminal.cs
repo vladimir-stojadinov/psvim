@@ -37,7 +37,7 @@ public sealed class ConsoleTerminal : ITerminal
         _out = Console.OpenStandardOutput();
         try { _oldOutEnc = Console.OutputEncoding; Console.OutputEncoding = new UTF8Encoding(false); } catch { }
         try { _oldCtrlC = Console.TreatControlCAsInput; Console.TreatControlCAsInput = true; } catch { }
-        if (OperatingSystem.IsWindows()) EnableVt();
+        if (Compat.IsWindows) EnableVt();
         // alternativni ekran, očisti, sakrij kursor dok crtamo
         Write("\x1b[?1049h\x1b[H\x1b[2J");
     }
@@ -49,7 +49,7 @@ public sealed class ConsoleTerminal : ITerminal
         Write("\x1b[0m\x1b[0 q\x1b[?25h\x1b[?1049l");
         try { Console.TreatControlCAsInput = _oldCtrlC; } catch { }
         try { if (_oldOutEnc != null) Console.OutputEncoding = _oldOutEnc; } catch { }
-        if (OperatingSystem.IsWindows()) RestoreVt();
+        if (Compat.IsWindows) RestoreVt();
     }
 
     public void Write(string s)
@@ -72,11 +72,11 @@ public sealed class ConsoleTerminal : ITerminal
 
     public bool WaitForKey(int ms)
     {
-        var until = Environment.TickCount64 + ms;
+        var until = Compat.Ticks + ms;
         while (true)
         {
             try { if (Console.KeyAvailable) return true; } catch { return false; }
-            if (Environment.TickCount64 >= until) return false;
+            if (Compat.Ticks >= until) return false;
             Thread.Sleep(10);
         }
     }

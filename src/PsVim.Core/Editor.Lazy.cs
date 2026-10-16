@@ -483,7 +483,7 @@ public sealed partial class Editor
         int bh = Math.Min(maxH, lines.Count + 2);
         int x = (sc.W - w) / 2, y = Math.Max(1, (sc.H - 2 - bh) / 2);
         int inner = bh - 2;
-        h.Scroll = Math.Clamp(h.Scroll, 0, Math.Max(0, lines.Count - inner));
+        h.Scroll = Compat.Clamp(h.Scroll, 0, Math.Max(0, lines.Count - inner));
         var bg = th.PopupBg;
         var title = h.Title + (lines.Count > inner ? $"  {h.Scroll + 1}-{Math.Min(lines.Count, h.Scroll + inner)}/{lines.Count}" : "");
         sc.Box(x, y, w, bh, new Style(th.Border, bg), new Style(th.Fg, bg), title, new Style(th.Orange, bg, Attr.Bold));
@@ -592,7 +592,7 @@ public sealed partial class Editor
         try
         {
             if (Hooks.Shell != null) return Hooks.Shell(cmd, input);
-            return RunProcess(Environment.ProcessPath ?? "pwsh", "-NoProfile -NoLogo -Command " + Quote(cmd), input);
+            return RunProcess(Compat.ProcessPath ?? "pwsh", "-NoProfile -NoLogo -Command " + Quote(cmd), input);
         }
         catch (Exception e) { Notify("Greška: " + e.Message, true); return null; }
     }
@@ -631,7 +631,7 @@ public sealed partial class Editor
         if (input != null) { p.StandardInput.Write(input); p.StandardInput.Close(); }
         var outTask = p.StandardOutput.ReadToEndAsync();
         var errTask = p.StandardError.ReadToEndAsync();
-        if (!p.WaitForExit(15000)) { try { p.Kill(true); } catch { } return "(prekinuto posle 15s)"; }
+        if (!p.WaitForExit(15000)) { try { p.Kill(); } catch { } return "(prekinuto posle 15s)"; }
         return outTask.Result + errTask.Result;
     }
 
@@ -673,7 +673,7 @@ public sealed partial class Editor
 
     private void OpenTerminal()
     {
-        var shell = Environment.ProcessPath;
+        var shell = Compat.ProcessPath;
         if (shell == null || !Path.GetFileNameWithoutExtension(shell).StartsWith("pwsh", StringComparison.OrdinalIgnoreCase))
             shell = Files.FindInPath("pwsh") ?? Files.FindInPath("powershell") ?? "pwsh";
         if (Ui.Term is not FakeTerminal) Ui.Term.Write("");
@@ -900,7 +900,7 @@ public sealed partial class Editor
             case "y": case "Y":
                 if (n == null) break;
                 {
-                    var p = k == "y" ? Path.GetRelativePath(Cwd, n.Path) : n.Path;
+                    var p = k == "y" ? Compat.RelativePath(Cwd, n.Path) : n.Path;
                     SetReg(null, p, false, true);
                     TrySetClipboard(p, false);
                     Notify("Kopirano: " + p);

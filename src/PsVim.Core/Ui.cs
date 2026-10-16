@@ -321,7 +321,7 @@ public sealed class Picker
             while (!ui.Input.KeyWaiting(0))
             {
                 bool changed = false;
-                long now = Environment.TickCount64;
+                long now = Compat.Ticks;
                 if (LiveAsync != null)
                 {
                     var cur = q.ToString();
@@ -349,8 +349,8 @@ public sealed class Picker
             if (LiveAsync != null)
             {
                 if (q.ToString() != liveQuery) StartLive(q.ToString());
-                var until = Environment.TickCount64 + 5000;
-                while (LiveBusy() && Environment.TickCount64 < until)
+                var until = Compat.Ticks + 5000;
+                while (LiveBusy() && Compat.Ticks < until)
                 {
                     int cnt; lock (liveList) cnt = liveList.Count;
                     if (cnt > sel) break;
@@ -359,8 +359,8 @@ public sealed class Picker
             }
             if (Poll != null && Loading != null)
             {
-                var until = Environment.TickCount64 + 5000;
-                do { Poll(); } while (Loading() && Items.Count == 0 && Environment.TickCount64 < until && Sleep());
+                var until = Compat.Ticks + 5000;
+                do { Poll(); } while (Loading() && Items.Count == 0 && Compat.Ticks < until && Sleep());
             }
             Compute();
         }
@@ -414,7 +414,7 @@ public sealed class Picker
                     if (q.ToString() != beforeText)
                     {
                         dirty = true; sel = 0; scroll = 0;
-                        lastEdit = Environment.TickCount64;
+                        lastEdit = Compat.Ticks;
                     }
                 }
             }

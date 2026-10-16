@@ -8,7 +8,7 @@ Otvori PowerShell i pokreni:
 irm https://raw.githubusercontent.com/vladimir-stojadinov/psvim/main/setup.ps1 | iex
 ```
 
-Odgovori na nekoliko pitanja (Enter = podrazumevano) i otvori novi PowerShell prozor. To je sve — setup instalira modul, upisuje psvim u `$PROFILE` i pravi konfiguraciju. Ako nemaš PowerShell 7, ponudiće da ga instalira.
+Odgovori na nekoliko pitanja (Enter = podrazumevano) i otvori novi PowerShell prozor. To je sve — setup instalira modul, upisuje psvim u `$PROFILE` i pravi konfiguraciju. Radi i u Windows PowerShell 5.1 i u PowerShell 7; ako imaš oba, setup nudi da instalira za oba.
 
 Ažuriranje: ista komanda. Uklanjanje:
 

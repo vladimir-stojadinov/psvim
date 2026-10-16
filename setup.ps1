@@ -4,7 +4,8 @@
 
 .DESCRIPTION
     Radi sve korake:
-      1. proverava PowerShell 7.4+ (iz Windows PowerShell-a nudi instalaciju i sam se ponovo pokreće u pwsh-u)
+      1. proverava verziju: radi i u Windows PowerShell 5.1 i u PowerShell 7.4+ (instalira za onaj iz kog je pokrenut,
+         a ako na računaru postoji i drugi, nudi da instalira i za njega)
       2. preuzima psvim sa GitHub-a ako skripta nije pokrenuta iz kloniranog repozitorijuma
       3. (opciono) builduje iz izvornog koda ako je instaliran .NET 8 SDK, inače koristi gotov DLL
       4. instalira modul za trenutnog korisnika
@@ -37,7 +38,8 @@ param(
     [switch]$Build,
     [switch]$ResetConfig,
     [switch]$Uninstall,
-    [string]$Source
+    [string]$Source,
+    [switch]$NoOtherEdition
 )
 
 # NAPOMENA: ovaj fajl mora da se parsira i u Windows PowerShell 5.1 (zbog irm | iex),
@@ -82,48 +84,36 @@ Write-Host '  psvim - vim i LazyVim za PowerShell' -ForegroundColor Blue
 Write-Host '  ===================================' -ForegroundColor DarkBlue
 
 # ---------------------------------------------------------------------------------------------
-# 1. PowerShell 7.4+
+# 1. Verzija PowerShell-a
 # ---------------------------------------------------------------------------------------------
 $ver = $PSVersionTable.PSVersion
-if ($ver.Major -lt 7 -or ($ver.Major -eq 7 -and $ver.Minor -lt 4)) {
-    Write-Step "Potreban je PowerShell 7.4 ili noviji (trenutno: $ver)"
+$isDesktop = $PSVersionTable.PSEdition -ne 'Core'
+$onWindows = [IO.Path]::DirectorySeparatorChar -eq '\'
+$selfExe = (Get-Process -Id $PID).Path
+if ($isDesktop) {
+    $editionName = "Windows PowerShell $($ver.Major).$($ver.Minor)"
+    if ($ver.Major -lt 5 -or ($ver.Major -eq 5 -and $ver.Minor -lt 1)) {
+        Write-Warn2 "Potreban je Windows PowerShell 5.1 ili PowerShell 7.4+ (trenutno: $ver)."
+        return
+    }
     try { [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12 } catch { }
-    $pwsh = Get-Command pwsh -ErrorAction SilentlyContinue
-    if (-not $pwsh) {
-        $candidate = Join-Path $env:ProgramFiles 'PowerShell\7\pwsh.exe'
-        if (Test-Path $candidate) { $pwsh = Get-Item $candidate }
+    # .NET Framework 4.7.2+ (release 461808)
+    $release = 0
+    try { $release = (Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\NET Framework Setup\NDP\v4\Full' -ErrorAction Stop).Release } catch { }
+    if ($release -lt 461808) {
+        Write-Warn2 'Potreban je .NET Framework 4.7.2 ili noviji: https://dotnet.microsoft.com/download/dotnet-framework'
+        Write-Warn2 'Ili koristi PowerShell 7: winget install Microsoft.PowerShell'
+        return
     }
-    if (-not $pwsh) {
-        if (Get-Command winget -ErrorAction SilentlyContinue) {
-            if (Ask-YesNo 'Da instaliram PowerShell 7 preko winget-a?' $true) {
-                winget install --id Microsoft.PowerShell -e --accept-source-agreements --accept-package-agreements
-                $candidate = Join-Path $env:ProgramFiles 'PowerShell\7\pwsh.exe'
-                if (Test-Path $candidate) { $pwsh = Get-Item $candidate }
-            }
-        }
-        if (-not $pwsh) {
-            Write-Warn2 'Instaliraj PowerShell 7: winget install Microsoft.PowerShell  (ili https://aka.ms/powershell)'
-            Write-Warn2 'Zatim pokreni setup ponovo iz pwsh-a.'
-            return
-        }
-    }
-    $pwshPath = if ($pwsh.Source) { $pwsh.Source } else { $pwsh.FullName }
-    # ponovo pokreni ovu skriptu u pwsh-u
-    $self = $PSCommandPath
-    if (-not $self) {
-        $self = Join-Path $env:TEMP 'psvim-setup.ps1'
-        Invoke-WebRequest -UseBasicParsing -Uri $RawUrl -OutFile $self
-    }
-    $argList = @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', $self)
-    foreach ($k in $PSBoundParameters.Keys) {
-        $v = $PSBoundParameters[$k]
-        if ($v -is [System.Management.Automation.SwitchParameter]) { if ($v.IsPresent) { $argList += "-$k" } }
-        else { $argList += "-$k"; $argList += "$v" }
-    }
-    Write-Info "Pokrećem setup u PowerShell 7 ($pwshPath)…"
-    & $pwshPath @argList
-    return
 }
+else {
+    $editionName = "PowerShell $ver"
+    if ($ver.Major -lt 7 -or ($ver.Major -eq 7 -and $ver.Minor -lt 4)) {
+        Write-Warn2 "Potreban je PowerShell 7.4 ili noviji (trenutno: $ver): winget install Microsoft.PowerShell"
+        return
+    }
+}
+Write-Info "Instaliram za: $editionName"
 
 # ---------------------------------------------------------------------------------------------
 # Putanje
@@ -132,7 +122,8 @@ $userModules = ($env:PSModulePath -split [IO.Path]::PathSeparator) |
     Where-Object { $_ -and $_.StartsWith($HOME, [StringComparison]::OrdinalIgnoreCase) } |
     Select-Object -First 1
 if (-not $userModules) {
-    if ($IsWindows) { $userModules = Join-Path ([Environment]::GetFolderPath('MyDocuments')) 'PowerShell\Modules' }
+    if ($isDesktop) { $userModules = Join-Path ([Environment]::GetFolderPath('MyDocuments')) 'WindowsPowerShell\Modules' }
+    elseif ($onWindows) { $userModules = Join-Path ([Environment]::GetFolderPath('MyDocuments')) 'PowerShell\Modules' }
     else { $userModules = Join-Path $HOME '.local/share/powershell/Modules' }
 }
 $moduleDest = Join-Path $userModules 'PsVim'
@@ -202,6 +193,7 @@ else {
 # 3. Build (opciono)
 # ---------------------------------------------------------------------------------------------
 $dll = Join-Path $root 'module/PsVim/bin/PsVim.Core.dll'
+if ($isDesktop) { $dll = Join-Path $root 'module/PsVim/bin/net472/PsVim.Core.dll' }
 $hasDotnet = [bool](Get-Command dotnet -ErrorAction SilentlyContinue) -and ((dotnet --list-sdks 2>$null) -match '^(8|9|10)\.')
 if ($Build -or (-not (Test-Path $dll))) {
     Write-Step 'Build iz izvornog koda'
@@ -212,8 +204,11 @@ if ($Build -or (-not (Test-Path $dll))) {
     else {
         dotnet build (Join-Path $root 'src/PsVim.Core/PsVim.Core.csproj') -c Release --nologo -v quiet | Out-Host
         if ($LASTEXITCODE) { throw 'Build nije uspeo.' }
-        Copy-Item (Join-Path $root 'src/PsVim.Core/bin/Release/net8.0/PsVim.Core.dll') $dll -Force
-        Write-Ok 'PsVim.Core.dll napravljen'
+        $out = Join-Path $root 'src/PsVim.Core/bin/Release'
+        New-Item -ItemType Directory -Force -Path (Join-Path $root 'module/PsVim/bin/net472') | Out-Null
+        Copy-Item (Join-Path $out 'net8.0/PsVim.Core.dll') (Join-Path $root 'module/PsVim/bin') -Force
+        Copy-Item (Join-Path $out 'net472/PsVim.Core.dll') (Join-Path $root 'module/PsVim/bin/net472') -Force
+        Write-Ok 'PsVim.Core.dll napravljen (net8.0 + net472)'
     }
 }
 else {
@@ -228,7 +223,7 @@ if (-not (Remove-InstalledModule)) { return }
 New-Item -ItemType Directory -Path $userModules -Force | Out-Null
 Copy-Item (Join-Path $root 'module/PsVim') $moduleDest -Recurse -Force
 Get-ChildItem $moduleDest -Recurse -Filter '*.new.dll' | Remove-Item -Force -ErrorAction SilentlyContinue
-if ($IsWindows) { Get-ChildItem $moduleDest -Recurse -File | Unblock-File -ErrorAction SilentlyContinue }
+if ($onWindows) { Get-ChildItem $moduleDest -Recurse -File | Unblock-File -ErrorAction SilentlyContinue }
 Write-Ok "Instalirano u $moduleDest"
 
 # ---------------------------------------------------------------------------------------------
@@ -296,13 +291,16 @@ Write-Step 'Dodaci'
 if (Get-Module -ListAvailable -Name PSScriptAnalyzer) { Write-Ok 'PSScriptAnalyzer je već instaliran' }
 elseif (-not $NoAnalyzer -and (Ask-YesNo 'Instalirati PSScriptAnalyzer (upozorenja i formatiranje koda)?' $true)) {
     try {
+        if ($isDesktop -and -not (Get-PackageProvider -ListAvailable -Name NuGet -ErrorAction SilentlyContinue | Where-Object { $_.Version -ge [version]'2.8.5.201' })) {
+            Install-PackageProvider -Name NuGet -MinimumVersion 2.8.5.201 -Scope CurrentUser -Force | Out-Null
+        }
         Install-Module PSScriptAnalyzer -Scope CurrentUser -Force -AllowClobber -ErrorAction Stop
         Write-Ok 'PSScriptAnalyzer instaliran'
     }
     catch { Write-Warn2 "PSScriptAnalyzer nije instaliran: $($_.Exception.Message)" }
 }
 if (Get-Command lazygit -ErrorAction SilentlyContinue) { Write-Ok 'lazygit je već instaliran' }
-elseif (-not $NoLazygit -and $IsWindows -and (Get-Command winget -ErrorAction SilentlyContinue) -and (Ask-YesNo 'Instalirati lazygit (␣gg u editoru)?' $false)) {
+elseif (-not $NoLazygit -and $onWindows -and (Get-Command winget -ErrorAction SilentlyContinue) -and (Ask-YesNo 'Instalirati lazygit (␣gg u editoru)?' $false)) {
     winget install --id JesseDuffield.lazygit -e --accept-source-agreements --accept-package-agreements | Out-Host
 }
 if (-not (Get-Command git -ErrorAction SilentlyContinue)) { Write-Warn2 'git nije instaliran - git prečice (␣gs, ␣gl, ␣gd) neće raditi.' }
@@ -311,7 +309,7 @@ if (-not (Get-Command git -ErrorAction SilentlyContinue)) { Write-Warn2 'git nij
 # 8. Provera
 # ---------------------------------------------------------------------------------------------
 Write-Step 'Provera'
-$check = & ([Environment]::ProcessPath) -NoProfile -NoLogo -Command @'
+$check = & $selfExe -NoProfile -NoLogo -Command @'
 try {
     Import-Module PsVim -ErrorAction Stop
     $h = New-PsVimHooks
@@ -326,6 +324,45 @@ if ($check -like 'OK|*') {
     Write-Ok "Modul PsVim $($p[1]) se učitava, dijagnostika radi, tema: $($p[3])"
 }
 else { Write-Warn2 "Provera nije uspela: $check" }
+
+# ---------------------------------------------------------------------------------------------
+# 9. Druga verzija PowerShell-a na istom računaru
+# ---------------------------------------------------------------------------------------------
+if (-not $NoOtherEdition -and $onWindows) {
+    $other = $null; $otherName = $null
+    if ($isDesktop) {
+        $p7 = Get-Command pwsh -ErrorAction SilentlyContinue
+        if ($p7) { $other = $p7.Source }
+        elseif (Test-Path (Join-Path $env:ProgramFiles 'PowerShell\7\pwsh.exe')) { $other = Join-Path $env:ProgramFiles 'PowerShell\7\pwsh.exe' }
+        $otherName = 'PowerShell 7'
+        if ($other) {
+            $ov = & $other -NoProfile -NoLogo -Command '$PSVersionTable.PSVersion.Major * 100 + $PSVersionTable.PSVersion.Minor'
+            if ([int]($ov | Select-Object -Last 1) -lt 704) { $other = $null }
+        }
+    }
+    else {
+        $ps51 = Join-Path $env:SystemRoot 'System32\WindowsPowerShell\v1.0\powershell.exe'
+        if (Test-Path $ps51) { $other = $ps51 }
+        $otherName = 'Windows PowerShell 5.1'
+    }
+    if ($other) {
+        Write-Step "Na racunaru postoji i $otherName"
+        if (Ask-YesNo "Instalirati psvim i za $otherName?" $true) {
+            $self = $PSCommandPath
+            if (-not $self) {
+                $self = Join-Path ([IO.Path]::GetTempPath()) 'psvim-setup.ps1'
+                Invoke-WebRequest -UseBasicParsing -Uri $RawUrl -OutFile $self
+            }
+            $argList = @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', $self, '-Yes', '-NoOtherEdition', '-NoLazygit', '-Source', $root)
+            if (-not $enablePrompt) { $argList += '-NoPrompt' }
+            if ($NoAnalyzer) { $argList += '-NoAnalyzer' }
+            & $other @argList
+        }
+    }
+    elseif ($isDesktop) {
+        Write-Info 'Savet: PowerShell 7 je brži i ima bolji prompt (winget install Microsoft.PowerShell), pa ponovo pokreni setup.'
+    }
+}
 
 Write-Host ''
 Write-Host '  Gotovo!' -ForegroundColor Green
