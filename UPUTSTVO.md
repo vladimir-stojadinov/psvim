@@ -2,20 +2,21 @@
 
 ## 1. Instalacija (jednom)
 
-Potrebno: PowerShell 7.4+ (najbolje u Windows Terminal-u).
+Otvori PowerShell i pokreni:
 
 ```powershell
-git clone https://github.com/vladimir-stojadinov/psvim
-cd psvim
-./build.ps1 -Install        # treba .NET 8 SDK; bez njega: Import-Module .\module\PsVim
+irm https://raw.githubusercontent.com/vladimir-stojadinov/psvim/main/setup.ps1 | iex
 ```
 
-U `$PROFILE` dodaj (otvori ga sa `psvim $PROFILE`):
+Odgovori na nekoliko pitanja (Enter = podrazumevano) i otvori novi PowerShell prozor. To je sve — setup instalira modul, upisuje psvim u `$PROFILE` i pravi konfiguraciju. Ako nemaš PowerShell 7, ponudiće da ga instalira.
+
+Ažuriranje: ista komanda. Uklanjanje:
 
 ```powershell
-Import-Module PsVim
-Enable-PsVimPrompt          # vim mod u promptu (opciono)
+& ([scriptblock]::Create((irm https://raw.githubusercontent.com/vladimir-stojadinov/psvim/main/setup.ps1))) -Uninstall
 ```
+
+Isti oblik prima i opcije, npr. `-Yes -Theme catppuccin` za instalaciju bez pitanja.
 
 ## 2. Pokretanje
 

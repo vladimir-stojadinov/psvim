@@ -48,35 +48,43 @@ Kratko uputstvo za početak: [UPUTSTVO.md](UPUTSTVO.md)
 
 ## Instalacija
 
-Potrebno: **PowerShell 7.4+** (Windows Terminal preporučen). Za build još treba .NET 8 SDK.
+Jedna komanda — preuzima psvim, instalira modul, podešava `$PROFILE` i konfiguraciju:
 
-Gotov `PsVim.Core.dll` već je u `module/PsVim/bin`, pa build nije obavezan:
+```powershell
+irm https://raw.githubusercontent.com/vladimir-stojadinov/psvim/main/setup.ps1 | iex
+```
+
+Ili iz kloniranog repozitorijuma:
 
 ```powershell
 git clone https://github.com/vladimir-stojadinov/psvim
-Import-Module .\psvim\module\PsVim
-psvim
-```
-
-Build iz izvornog koda i instalacija za trenutnog korisnika:
-
-```powershell
 cd psvim
-./build.ps1 -Test      # build + 234 testa
-./build.ps1 -Install   # kopira modul u Documents\PowerShell\Modules\PsVim
+./setup.ps1
 ```
 
-U `$PROFILE` (otvori sa `psvim $PROFILE`):
+Setup postavlja nekoliko pitanja (vim mod u promptu, tema, relativni brojevi, Nerd Font, uvlačenje, PSScriptAnalyzer, lazygit), a zatim:
 
-```powershell
-Import-Module PsVim
-Enable-PsVimPrompt          # vim mod u promptu; izostavi ako ti ne treba
-```
+1. proverava PowerShell 7.4+ — ako je pokrenut iz Windows PowerShell 5.1, nudi instalaciju preko winget-a i sam se ponovo pokreće u `pwsh`-u
+2. instalira modul u korisnički folder za module
+3. dodaje blok `# >>> psvim >>>` u `$PROFILE` (pravi rezervnu kopiju `.psvim-bak`; ostatak profila ne dira)
+4. pravi `~/.config/psvim/config.json`
+5. proverava da se modul učitava
 
-Preporuke:
-- Nerd Font (npr. `JetBrainsMono Nerd Font`) i `:set nerdfont` za ikonice
-- `Install-Module PSScriptAnalyzer` za lint i formatiranje
-- `winget install JesseDuffield.lazygit` za `␣gg`
+| Opcija | Šta radi |
+|---|---|
+| `-Yes` | bez pitanja, sve podrazumevano |
+| `-Theme catppuccin` | tema (`tokyonight`, `catppuccin`, `gruvbox`, `kanagawa`) |
+| `-NoPrompt` | bez vim moda u promptu (samo `psvim` editor) |
+| `-NoAnalyzer` / `-NoLazygit` | preskoči dodatke |
+| `-ResetConfig` | prepiši postojeću konfiguraciju |
+| `-Build` | izgradi DLL iz koda (treba .NET 8 SDK); inače se koristi gotov |
+| `-Uninstall` | ukloni modul i blok iz `$PROFILE` (konfiguracija ostaje) |
+
+Za ažuriranje samo ponovo pokreni setup. Ako javi da ne može da obriše modul, zatvori PowerShell prozore u kojima je psvim učitan.
+
+Za razvoj: `./build.ps1 -Test` (build + testovi), `./build.ps1 -Install`.
+
+Preporuka: Nerd Font (npr. `JetBrainsMono Nerd Font`) u terminalu za ikonice.
 
 ## Korišćenje
 
@@ -153,7 +161,7 @@ src/PsVim.Core/        C# (.NET 8), bez spoljnih zavisnosti
   PromptUi.cs          picker-i i which-key za PSReadLine
 module/PsVim/          PowerShell modul: kuke (clipboard, Get-Help, parser,
                        PSScriptAnalyzer, TabExpansion2) i PSReadLine prečice
-tests/PsVim.Tests/     234 testa koji "kucaju" tastere i proveravaju rezultat
+tests/PsVim.Tests/     238 testova koji "kucaju" tastere i proveravaju rezultat
 ```
 
 Editor ne zavisi od PowerShell SDK-a; sve što traži PowerShell ide kroz `PsVim.Hooks` delegate koje modul popunjava skriptblokovima. Zato se jezgro testira bez PowerShell-a, a modul radi na Windows-u, Linux-u i macOS-u.
