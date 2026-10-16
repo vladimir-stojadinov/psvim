@@ -53,25 +53,35 @@ $Repo = 'vladimir-stojadinov/psvim'
 $RawUrl = "https://raw.githubusercontent.com/$Repo/main/setup.ps1"
 $ZipUrl = "https://github.com/$Repo/archive/refs/heads/main.zip"
 
-function Write-Step([string]$text) { Write-Host ''; Write-Host "» $text" -ForegroundColor Cyan }
-function Write-Ok([string]$text) { Write-Host "  √ $text" -ForegroundColor Green }
-function Write-Info([string]$text) { Write-Host "  $text" -ForegroundColor Gray }
-function Write-Warn2([string]$text) { Write-Host "  ! $text" -ForegroundColor Yellow }
+# Windows PowerShell 5.1 čita .ps1 bez BOM-a kao ANSI (cp1250/1252), pa UTF-8 slova postanu nečitljiva.
+# BOM ne smemo da dodamo (lomi irm | iex), zato proveravamo jedan znak i po potrebi ispravljamo tekst.
+$script:Canary = 'č'
+$script:Misread = $script:Canary.Length -ne 1
+function Fix([string]$text) {
+    if (-not $script:Misread -or -not $text) { return $text }
+    if ($text -notmatch '[\u00C2-\u00C5\u00E2]') { return $text }
+    try { return [Text.Encoding]::UTF8.GetString([Text.Encoding]::Default.GetBytes($text)) } catch { return $text }
+}
+function Say([string]$text, [string]$color = 'Gray') { Write-Host (Fix $text) -ForegroundColor $color }
+function Write-Step([string]$text) { Write-Host ''; Say "» $text" Cyan }
+function Write-Ok([string]$text) { Say "  √ $text" Green }
+function Write-Info([string]$text) { Say "  $text" Gray }
+function Write-Warn2([string]$text) { Say "  ! $text" Yellow }
 
 function Ask-YesNo([string]$question, [bool]$default) {
     if ($Yes) { return $default }
     $hint = if ($default) { '[D/n]' } else { '[d/N]' }
-    $a = Read-Host "  $question $hint"
+    $a = Read-Host (Fix "  $question $hint")
     if ([string]::IsNullOrWhiteSpace($a)) { return $default }
     return ($a.Trim().ToLower() -in @('d', 'da', 'y', 'yes'))
 }
 
 function Ask-Choice([string]$question, [string[]]$options, [string]$default) {
     if ($Yes) { return $default }
-    Write-Host "  $question"
+    Say "  $question" Gray
     for ($i = 0; $i -lt $options.Count; $i++) {
         $mark = if ($options[$i] -eq $default) { ' (podrazumevano)' } else { '' }
-        Write-Host ("    {0}) {1}{2}" -f ($i + 1), $options[$i], $mark)
+        Say ("    {0}) {1}{2}" -f ($i + 1), $options[$i], $mark) Gray
     }
     $a = Read-Host '  Izbor'
     $n = 0
@@ -80,8 +90,8 @@ function Ask-Choice([string]$question, [string[]]$options, [string]$default) {
 }
 
 Write-Host ''
-Write-Host '  psvim - vim i LazyVim za PowerShell' -ForegroundColor Blue
-Write-Host '  ===================================' -ForegroundColor DarkBlue
+Say '  psvim - vim i LazyVim za PowerShell' Blue
+Say '  ===================================' DarkBlue
 
 # ---------------------------------------------------------------------------------------------
 # 1. Verzija PowerShell-a
@@ -309,7 +319,7 @@ if (-not (Get-Command git -ErrorAction SilentlyContinue)) { Write-Warn2 'git nij
 # 8. Provera
 # ---------------------------------------------------------------------------------------------
 Write-Step 'Provera'
-$check = & $selfExe -NoProfile -NoLogo -Command @'
+$checkScript = @'
 try {
     Import-Module PsVim -ErrorAction Stop
     $h = New-PsVimHooks
@@ -318,6 +328,9 @@ try {
     "OK|$((Get-Module PsVim).Version)|$($d.Count)|$($o.Theme)"
 } catch { "ERR|$($_.Exception.Message)" }
 '@
+# -EncodedCommand: Windows PowerShell 5.1 kvari navodnike kad višelinijsku komandu šalje drugom procesu
+$encoded = [Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes($checkScript))
+$check = & $selfExe -NoProfile -NoLogo -NonInteractive -EncodedCommand $encoded
 $check = ($check | Select-Object -Last 1)
 if ($check -like 'OK|*') {
     $p = $check -split '\|'
@@ -347,7 +360,7 @@ if (-not $NoOtherEdition -and $onWindows) {
     }
     if ($other) {
         Write-Step "Na racunaru postoji i $otherName"
-        if (Ask-YesNo "Instalirati psvim i za $otherName?" $true) {
+        if (Ask-YesNo "Instalirati psvim i za ${otherName}?" $true) {
             $self = $PSCommandPath
             if (-not $self) {
                 $self = Join-Path ([IO.Path]::GetTempPath()) 'psvim-setup.ps1'
@@ -365,11 +378,11 @@ if (-not $NoOtherEdition -and $onWindows) {
 }
 
 Write-Host ''
-Write-Host '  Gotovo!' -ForegroundColor Green
-Write-Host '  Otvori novi PowerShell prozor (ili ukucaj: . $PROFILE), pa:' -ForegroundColor Gray
-Write-Host '      psvim              početni ekran' -ForegroundColor White
-Write-Host '      psvim fajl.ps1     otvori fajl' -ForegroundColor White
-Write-Host '      :help              pomoć u editoru' -ForegroundColor White
+Say '  Gotovo!' Green
+Say '  Otvori novi PowerShell prozor (ili ukucaj: . $PROFILE), pa:' Gray
+Say '      psvim              početni ekran' White
+Say '      psvim fajl.ps1     otvori fajl' White
+Say '      :help              pomoć u editoru' White
 if ($enablePrompt) { Write-Host '  U promptu: Esc pa razmak otvara meni.' -ForegroundColor Gray }
-Write-Host "  Uputstvo: https://github.com/$Repo/blob/main/UPUTSTVO.md" -ForegroundColor Gray
+Say "  Uputstvo: https://github.com/$Repo/blob/main/UPUTSTVO.md" Gray
 Write-Host ''
