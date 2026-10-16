@@ -148,14 +148,36 @@ function Remove-ProfileBlock([string]$text) {
     return [regex]::Replace($text, $pattern, '')
 }
 
+$script:ModuleWasLocked = $false
+
+# Učitan DLL (npr. jer ga $PROFILE učitava u ovom prozoru) Windows ne da da se obriše,
+# ali dozvoljava preimenovanje. Zato zaključane fajlove sklanjamo pod imenom *.psvim-old
+# i brišemo ih pri sledećem pokretanju setup-a.
 function Remove-InstalledModule {
     if (-not (Test-Path $moduleDest)) { return $true }
-    try { Remove-Item $moduleDest -Recurse -Force; return $true }
-    catch {
-        Write-Warn2 "Ne mogu da obrišem $moduleDest - modul je učitan u nekom PowerShell prozoru."
-        Write-Warn2 'Zatvori sve PowerShell prozore u kojima si koristio psvim i pokreni setup ponovo.'
-        return $false
+    try { Remove-Item $moduleDest -Recurse -Force -ErrorAction Stop; return $true } catch { }
+    foreach ($f in @(Get-ChildItem $moduleDest -Recurse -File -ErrorAction SilentlyContinue)) {
+        if ($f.Name -like '*.psvim-old*') { continue }
+        try { Remove-Item $f.FullName -Force -ErrorAction Stop }
+        catch {
+            try {
+                Rename-Item $f.FullName ($f.Name + '.psvim-old' + [guid]::NewGuid().ToString('N').Substring(0, 6)) -ErrorAction Stop
+                $script:ModuleWasLocked = $true
+            }
+            catch {
+                Write-Warn2 "Ne mogu ni da obrišem ni da sklonim $($f.FullName)."
+                Write-Warn2 'Zatvori PowerShell prozore u kojima je psvim učitan i pokreni setup ponovo.'
+                return $false
+            }
+        }
     }
+    return $true
+}
+
+function Remove-StaleFiles {
+    if (-not (Test-Path $moduleDest)) { return }
+    Get-ChildItem $moduleDest -Recurse -File -Filter '*.psvim-old*' -ErrorAction SilentlyContinue |
+        ForEach-Object { Remove-Item $_.FullName -Force -ErrorAction SilentlyContinue }
 }
 
 # ---------------------------------------------------------------------------------------------
@@ -163,7 +185,10 @@ function Remove-InstalledModule {
 # ---------------------------------------------------------------------------------------------
 if ($Uninstall) {
     Write-Step 'Uklanjam psvim'
-    if (Remove-InstalledModule) { Write-Ok "Modul uklonjen ($moduleDest)" }
+    if (Remove-InstalledModule) {
+        if ($script:ModuleWasLocked) { Write-Ok "Modul uklonjen ($moduleDest); zaključani fajlovi se brišu kad zatvoriš PowerShell i ponovo pokreneš setup -Uninstall" }
+        else { Write-Ok "Modul uklonjen ($moduleDest)" }
+    }
     if (Test-Path $profilePath) {
         $text = Get-Content -LiteralPath $profilePath -Raw
         $new = Remove-ProfileBlock $text
@@ -229,12 +254,15 @@ else {
 # 4. Modul
 # ---------------------------------------------------------------------------------------------
 Write-Step 'Instalacija modula'
+Remove-StaleFiles
 if (-not (Remove-InstalledModule)) { return }
-New-Item -ItemType Directory -Path $userModules -Force | Out-Null
-Copy-Item (Join-Path $root 'module/PsVim') $moduleDest -Recurse -Force
+New-Item -ItemType Directory -Path $moduleDest -Force | Out-Null
+# kopiraj sadržaj (ne folder), da radi i kad su u $moduleDest ostali sklonjeni fajlovi
+Copy-Item (Join-Path (Join-Path $root 'module/PsVim') '*') $moduleDest -Recurse -Force
 Get-ChildItem $moduleDest -Recurse -Filter '*.new.dll' | Remove-Item -Force -ErrorAction SilentlyContinue
 if ($onWindows) { Get-ChildItem $moduleDest -Recurse -File | Unblock-File -ErrorAction SilentlyContinue }
 Write-Ok "Instalirano u $moduleDest"
+if ($script:ModuleWasLocked) { Write-Info 'Stara verzija je učitana u ovom prozoru - nova važi od sledećeg PowerShell prozora.' }
 
 # ---------------------------------------------------------------------------------------------
 # 5. Podešavanja (pitanja)
